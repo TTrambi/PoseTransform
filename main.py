@@ -10,7 +10,7 @@ IMGFOLDER = Path(r'/home/thomas/PoseTransform/images/')
 POSFILE = Path(r'pose_test.csv')
 OUTFOLDER = Path(r'/home/thomas/PoseTransform/imagesOut/')
 
-MODE = 'FIRST' #other options: 'first', ...
+MODE = 'FIRST' #other options: 'FIRST', 'MEAN'
 
 STEP = 0.001 #mm
 
@@ -39,7 +39,6 @@ def main():
     rectPoses = getRectifingPoses(initPose, poses)
     rectifyImages(images, rectPoses)
     
-
 def getInitialPose(poses):
     convPoses = []
 
@@ -77,7 +76,6 @@ def getInitialPose(poses):
 
     return initPose
 
-
 def rectifyImages(images, relPoses):
     ''' Rectify the images with the provided relativePoses'''
 
@@ -111,7 +109,6 @@ def rectifyImages(images, relPoses):
         cv2.imwrite(str(OUTFOLDER.joinpath(imgPath.name)), img)
         i=i+1
 
-
 def getRectifingPoses(initPose, poses):
     ''' Return all relative poses in a list '''
     i = 0
@@ -119,8 +116,8 @@ def getRectifingPoses(initPose, poses):
     for pose in poses:
         tempInitPose = np.array(initPose)
         #for each image increase x-dir via step size
-        #tempInitPose[0,3] = initPose[0,3]+(i*STEP)
-        rPose = computeRelativePose(initPose, pose)
+        tempInitPose[0,3] = initPose[0,3]+(i*STEP)
+        rPose = computeRelativePose(tempInitPose, pose)
         relativePose.append(rPose)
         i=i+1
     
@@ -139,7 +136,6 @@ def computeRelativePose(initPose, pose):
 
     relPose = np.hstack((R_relToInit, T_relToInit.reshape((3,1))))
     relPose = np.vstack((relPose, np.array([0,0,0,1])))
-    #print(relativePose)
     return relPose
 
 

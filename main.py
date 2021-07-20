@@ -7,7 +7,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 IMGFOLDER = Path(r'/home/thomas/PoseTransform/images/')
-POSFILE = Path(r'pose_test.csv')
+POSFILE = Path(r'/home/thomas/PoseTransform/pose_test.csv')
 OUTFOLDER = Path(r'/home/thomas/PoseTransform/imagesOut/')
 
 MODE = 'FIRST' #other options: 'FIRST', 'MEAN'
@@ -79,10 +79,12 @@ def getInitialPose(poses):
 def rectifyImages(images, relPoses):
     ''' Rectify the images with the provided relativePoses'''
 
+    print(K)
     # K inverse
     Kinv = np.zeros((4,3))
-    Kinv[:3,:3] = np.linalg.inv(K[:3,:3])#*3707.172386
+    Kinv[:3,:3] = np.linalg.inv(K[:3,:3])
     Kinv[-1,:] = [0, 0, 1]
+    print(Kinv)
 
     #for all images
     i = 0
@@ -102,7 +104,12 @@ def rectifyImages(images, relPoses):
         T = np.identity(4)
         T[0:3,3] = relT
 
+        print(T)
+
         H = np.linalg.multi_dot([K, R, T, Kinv])
+        print(H)
+        #H = np.array([[1,0,0],[0,1,-25],[0,0,1]], dtype=np.float)
+        #print(H)
 
         #transfrom image and save
         img = cv2.warpPerspective(img, H, (img.shape[1], img.shape[0]))
@@ -137,7 +144,6 @@ def computeRelativePose(initPose, pose):
     relPose = np.hstack((R_relToInit, T_relToInit.reshape((3,1))))
     relPose = np.vstack((relPose, np.array([0,0,0,1])))
     return relPose
-
 
 if __name__ == "__main__":
     main()

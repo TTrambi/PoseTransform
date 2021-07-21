@@ -1,14 +1,17 @@
 from pathlib import Path
+import pathlib
 import cv2
 import numpy as np
 import csv
 from numpy.core.shape_base import hstack
 from scipy.spatial.transform import Rotation as R
+import os
 
+current_dir = pathlib.Path.cwd()
 
-IMGFOLDER = Path(r'/home/thomas/PoseTransform/images/')
-POSFILE = Path(r'/home/thomas/PoseTransform/pose_test.csv')
-OUTFOLDER = Path(r'/home/thomas/PoseTransform/imagesOut/')
+IMGFOLDER = current_dir.joinpath('images/')
+POSFILE = current_dir.joinpath('pose_test.csv')
+OUTFOLDER = current_dir.joinpath('imagesOut/')
 
 MODE = 'FIRST' #other options: 'FIRST', 'MEAN'
 
@@ -79,12 +82,10 @@ def getInitialPose(poses):
 def rectifyImages(images, relPoses):
     ''' Rectify the images with the provided relativePoses'''
 
-    print(K)
     # K inverse
     Kinv = np.zeros((4,3))
     Kinv[:3,:3] = np.linalg.inv(K[:3,:3])
     Kinv[-1,:] = [0, 0, 1]
-    print(Kinv)
 
     #for all images
     i = 0
@@ -95,8 +96,10 @@ def rectifyImages(images, relPoses):
         #img = cv2.undistort(img, K, D, None)
 
         #get euclidian homography matrix from relative pose
-        relR = relPoses[i][0:3,0:3]
-        relT = relPoses[i][0:3,3]
+        relR = np.array(relPoses[i][0:3,0:3])
+        relT = np.array(relPoses[i][0:3,3])
+        relTDiv = [x/0.26 for x in relT]
+        relT = relTDiv  
 
         R = np.hstack((relR, np.array([[0],[0],[0]])))
         R = np.vstack((R, np.array([0,0,0,1])))
@@ -104,17 +107,14 @@ def rectifyImages(images, relPoses):
         T = np.identity(4)
         T[0:3,3] = relT
 
-        print(T)
-
         H = np.linalg.multi_dot([K, R, T, Kinv])
-        print(H)
-        #H = np.array([[1,0,0],[0,1,-25],[0,0,1]], dtype=np.float)
-        #print(H)
+        print("H: \n", H)
 
         #transfrom image and save
         img = cv2.warpPerspective(img, H, (img.shape[1], img.shape[0]))
         cv2.imwrite(str(OUTFOLDER.joinpath(imgPath.name)), img)
         i=i+1
+
 
 def getRectifingPoses(initPose, poses):
     ''' Return all relative poses in a list '''
@@ -123,7 +123,7 @@ def getRectifingPoses(initPose, poses):
     for pose in poses:
         tempInitPose = np.array(initPose)
         #for each image increase x-dir via step size
-        tempInitPose[0,3] = initPose[0,3]+(i*STEP)
+        #tempInitPose[0,3] = initPose[0,3]+(i*STEP)
         rPose = computeRelativePose(tempInitPose, pose)
         relativePose.append(rPose)
         i=i+1

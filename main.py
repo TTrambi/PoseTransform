@@ -10,7 +10,7 @@ import os
 current_dir = pathlib.Path.cwd()
 
 IMGFOLDER = current_dir.joinpath('images/')
-POSFILE = current_dir.joinpath('pose_test.csv')
+POSFILE = current_dir.joinpath('pose_refined_global.csv')
 OUTFOLDER = current_dir.joinpath('imagesOut/')
 
 MODE = 'FIRST' #other options: 'FIRST', 'MEAN'
@@ -90,7 +90,7 @@ def rectifyImages(images, relPoses):
     #for all images
     i = 0
     for imgPath in images:
-
+        print("Image: ", i+1)
         #load and undistort
         img = cv2.imread(str(imgPath))
         #img = cv2.undistort(img, K, D, None)
@@ -98,8 +98,13 @@ def rectifyImages(images, relPoses):
         #get euclidian homography matrix from relative pose
         relR = np.array(relPoses[i][0:3,0:3])
         relT = np.array(relPoses[i][0:3,3])
-        relTDiv = [x/0.26 for x in relT]
+        print("relT: \n", relT)
+        relTDiv = [x/0.265 for x in relT]
+
         relT = relTDiv  
+        #relT[0] = 0
+        #relT[1] = -relT[1]
+        #relT[2] = 0
 
         R = np.hstack((relR, np.array([[0],[0],[0]])))
         R = np.vstack((R, np.array([0,0,0,1])))
@@ -107,6 +112,7 @@ def rectifyImages(images, relPoses):
         T = np.identity(4)
         T[0:3,3] = relT
 
+        R = np.eye(4)
         H = np.linalg.multi_dot([K, R, T, Kinv])
         print("H: \n", H)
 
@@ -115,7 +121,6 @@ def rectifyImages(images, relPoses):
         cv2.imwrite(str(OUTFOLDER.joinpath(imgPath.name)), img)
         i=i+1
 
-
 def getRectifingPoses(initPose, poses):
     ''' Return all relative poses in a list '''
     i = 0
@@ -123,8 +128,9 @@ def getRectifingPoses(initPose, poses):
     for pose in poses:
         tempInitPose = np.array(initPose)
         #for each image increase x-dir via step size
-        #tempInitPose[0,3] = initPose[0,3]+(i*STEP)
+        tempInitPose[0,3] = initPose[0,3]+(i*STEP)
         rPose = computeRelativePose(tempInitPose, pose)
+        #rPose = computeRelativePose(pose, tempInitPose)
         relativePose.append(rPose)
         i=i+1
     
@@ -138,8 +144,12 @@ def computeRelativePose(initPose, pose):
     poseR = pose[0:3,0:3]
     poseT = pose[0:3,3]
 
+    initR = np.array([[1,0,0],[0,1,0],[0,0,1]])
+    poseR = np.array([[1,0,0],[0,1,0],[0,0,1]])
+
     R_relToInit = initR @ poseR.T
-    T_relToInit = initR @ (-poseR.T @ poseT) + initT
+    #T_relToInit = initR @ (-poseR.T @ poseT) + initT
+    T_relToInit = poseT - initT
 
     relPose = np.hstack((R_relToInit, T_relToInit.reshape((3,1))))
     relPose = np.vstack((relPose, np.array([0,0,0,1])))
